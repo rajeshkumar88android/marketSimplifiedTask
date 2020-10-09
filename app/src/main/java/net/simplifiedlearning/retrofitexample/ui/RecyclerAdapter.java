@@ -33,7 +33,7 @@ public class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.Myview
     @Override
     public RecyclerAdapter.MyviewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(context).inflate(R.layout.recyclerview_adapter,parent,false);
-        view.setOnClickListener((View.OnClickListener) context);
+      //  view.setOnClickListener((View.OnClickListener) context);
       //  mTextView = (TextView) view;
         return new MyviewHolder(view);
     }
