@@ -1,12 +1,14 @@
 package net.simplifiedlearning.retrofitexample.ui.home;
 
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -20,13 +22,13 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import net.simplifiedlearning.retrofitexample.Hero;
+import net.simplifiedlearning.retrofitexample.OnItemClickListener;
 import net.simplifiedlearning.retrofitexample.R;
 import net.simplifiedlearning.retrofitexample.RetrofitClient;
 import net.simplifiedlearning.retrofitexample.ui.ApiClient;
 import net.simplifiedlearning.retrofitexample.ui.ApiInterface;
 import net.simplifiedlearning.retrofitexample.ui.Movie;
 import net.simplifiedlearning.retrofitexample.ui.RecyclerAdapter;
-import net.simplifiedlearning.retrofitexample.ui.RecyclerItemClickListener;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,14 +37,20 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class HomeFragment extends Fragment {
+public class HomeFragment extends Fragment implements OnItemClickListener {
 
     private HomeViewModel homeViewModel;
     List<Movie> movieList;
     RecyclerView recyclerView;
     RecyclerAdapter recyclerAdapter;
-
     ListView listView;
+    private OnItemClickListener listItemClickListener;
+
+    boolean isLoading = false;
+
+    ProgressBar progressBar;
+
+
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
         homeViewModel =
@@ -57,28 +65,161 @@ public class HomeFragment extends Fragment {
         });
 
        listView = root.findViewById(R.id.listViewHeroes);
+        //populateData();
+      //  initAdapter();
+
 
 
         movieList = new ArrayList<>();
         recyclerView = (RecyclerView)root.findViewById(R.id.recycleViewContainer);
         LinearLayoutManager layoutManager = new LinearLayoutManager(getContext());
         recyclerView.setLayoutManager(layoutManager);
-        recyclerAdapter = new RecyclerAdapter(getContext(),movieList);
+        recyclerAdapter = new RecyclerAdapter(getContext(),movieList,listItemClickListener);
         recyclerView.setAdapter(recyclerAdapter);
+        progressBar = root.findViewById(R.id.progressBar);
+
+      //  initScrollListener();
+
+       // recyclerAdapter.setOnItemClickListener(onItemClickListener);
+
         recyclerView.addItemDecoration(new DividerItemDecoration(recyclerView.getContext(), DividerItemDecoration.VERTICAL));
 
+        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+            }
+
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+
+                LinearLayoutManager linearLayoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
+
+                if (!isLoading) {
+                    if (linearLayoutManager != null && linearLayoutManager.findLastCompletelyVisibleItemPosition() == movieList.size() - 1) {
+                        //bottom of list!
+                        loadMore();
+
+                        isLoading = true;
+                    }
+                }
+
+            }
+
+            private void loadMore() {
+                movieList.add(null);
+                recyclerAdapter.notifyItemInserted(movieList.size() - 1);
+
+                Handler handler = new Handler();
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        movieList.remove(movieList.size() - 1);
+                        int scrollPosition = movieList.size();
+                        recyclerAdapter.notifyItemRemoved(scrollPosition);
+                        int currentSize = scrollPosition;
+                        int nextLimit = currentSize + 10;
+                        // progressBar.setVisibility(View.GONE);
+
+                        while (currentSize - 1 < nextLimit) {
+                            //  rowsArrayList.add("Item " + currentSize);
+                            recyclerAdapter.setMovieList(movieList);
+                         //   progressBar.setVisibility(View.GONE);
+
+
+                            currentSize++;
+                        }
+
+                        recyclerAdapter.notifyDataSetChanged();
+                        isLoading = false;
+                    }
+
+                },2000);
+
+            }
+        });
+
+        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+
+            @Override
+            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+                progressBar.setVisibility(View.VISIBLE);
+
+            }
+
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                progressBar.setVisibility(View.VISIBLE);
+
+                LinearLayoutManager linearLayoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
+
+                if (!isLoading) {
+                    if (linearLayoutManager != null && linearLayoutManager.findLastCompletelyVisibleItemPosition() == movieList.size() - 1) {
+                        //bottom of list!
+                        loadMore();
+
+                        isLoading = true;
+                    }
+                }
+            }
+
+            private void loadMore() {
+                movieList.add(null);
+                recyclerAdapter.notifyItemInserted(movieList.size() - 1);
+
+                Handler handler = new Handler();
+ handler.postDelayed(new Runnable() {
+     @Override
+     public void run() {
+
+         movieList.remove(movieList.size() - 1);
+         int scrollPosition = movieList.size();
+         recyclerAdapter.notifyItemRemoved(scrollPosition);
+         int currentSize = scrollPosition;
+         int nextLimit = currentSize + 10;
+        // progressBar.setVisibility(View.GONE);
+
+         while (currentSize - 1 < nextLimit) {
+             //  rowsArrayList.add("Item " + currentSize);
+             recyclerAdapter.setMovieList(movieList);
+         //    progressBar.setVisibility(View.GONE);
+
+
+             currentSize++;
+         }
+
+         recyclerAdapter.notifyDataSetChanged();
+         isLoading = false;
+     }
+
+ },2000);
+            }
+        });
+
+/*
         recyclerView.addOnItemTouchListener(
                 new RecyclerItemClickListener(getContext(), recyclerView ,new RecyclerItemClickListener.OnItemClickListener() {
                     @Override public void onItemClick(View view, int position) {
                         // do whatever
-                        Log.e("pos",""+position);
+                        Log.e("pos",""+String.valueOf(position)+view.toString());
                     }
 
                     @Override public void onLongItemClick(View view, int position) {
                         // do whatever
                     }
+
+                    @Override
+                    public void onItemClick(Movie movie) {
+                        Log.e("",""+movie.getTitle());
+                        movie.getTitle();
+                    }
                 })
         );
+*/
 
 
         ApiInterface apiService = ApiClient.getClient().create(ApiInterface.class);
@@ -89,7 +230,7 @@ public class HomeFragment extends Fragment {
             public void onResponse(Call<List<Movie>> call, Response<List<Movie>> response) {
                 movieList = response.body();
                 Log.e("TAG","Response = "+movieList);
-                recyclerAdapter.setMovieList(movieList);
+                populateData();
             }
 
             @Override
@@ -104,6 +245,76 @@ public class HomeFragment extends Fragment {
 
         return root;
     }
+
+
+    private void initScrollListener() {
+        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+            }
+
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+
+                LinearLayoutManager linearLayoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
+
+                if (!isLoading) {
+                    if (linearLayoutManager != null && linearLayoutManager.findLastCompletelyVisibleItemPosition() == movieList.size() - 1) {
+                        //bottom of list!
+                        loadMore();
+
+                        isLoading = true;
+                    }
+                }
+            }
+
+            private void loadMore() {
+                movieList.add(null);
+                recyclerAdapter.notifyItemInserted(movieList.size() - 1);
+
+
+                Handler handler = new Handler();
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        movieList.remove(movieList.size() - 1);
+                        int scrollPosition = movieList.size();
+                        recyclerAdapter.notifyItemRemoved(scrollPosition);
+                        int currentSize = scrollPosition;
+                        int nextLimit = currentSize + 10;
+                      //  progressBar.setVisibility(View.GONE);
+
+                        while (currentSize - 1 < nextLimit) {
+                          //  rowsArrayList.add("Item " + currentSize);
+                            recyclerAdapter.setMovieList(movieList);
+
+                            currentSize++;
+                        }
+
+                        recyclerAdapter.notifyDataSetChanged();
+                        isLoading = false;
+                    }
+                }, 2000);
+
+
+            }
+
+        });
+    }
+
+
+    private void populateData() {
+        int i = 0;
+        while (i < 10) {
+           // movieList.add();
+            recyclerAdapter.setMovieList(movieList);
+
+            i++;
+        }
+    }
+
 
     private void getHeroes() {
         Call<List<Hero>> call = RetrofitClient.getInstance().getMyApi().getHeroes();
@@ -132,4 +343,12 @@ public class HomeFragment extends Fragment {
 
     }
 
+    @Override
+    public void clickPosition(int position, int id) {
+        switch (id) {
+            case R.id.title:
+                Toast.makeText(getContext(), position + " Full View ID" + id, Toast.LENGTH_SHORT).show();
+                break;
+        }
+    }
 }
